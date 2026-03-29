@@ -23,7 +23,7 @@ jobs:
           echo "Connected to EC2"
 
           # Go to project folder
-          cd ~/Incident-management-system
+          cd ~/incident-management-system
 
           # Pull latest code
           git pull origin main
