@@ -17,22 +17,17 @@ jobs:
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
+        username: ec2-user   # ✅ FIXED
         key: ${{ secrets.EC2_KEY }}
         script: |
           echo "Connected to EC2"
 
-          # Go to project folder
           cd ~/incident-management-system
 
-          # Pull latest code
           git pull origin main
 
-          # Install dependencies
           pip3 install -r requirements.txt
 
-          # Kill old app
           pkill -f app.py || true
 
-          # Start app
           nohup python3 app.py > output.log 2>&1 &
