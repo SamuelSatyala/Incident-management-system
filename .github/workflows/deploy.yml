@@ -2,35 +2,37 @@ name: Deploy Flask App to EC2
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Copy project to EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ec2-user
-        key: ${{ secrets.EC2_KEY }}
-        source: "."
-        target: "~/incident-management-system"
-
-    - name: Deploy on EC2
+    - name: Deploy to EC2 via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ec2-user
+        username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-          cd ~/incident-management-system
-          python3 -m venv venv || true
-          source venv/bin/activate
-          pip install flask flask-sqlalchemy python-dotenv gunicorn boto3
-          pkill gunicorn || true
-          gunicorn app:app --bind 0.0.0.0:8000 --daemon
+          echo "Connected to EC2"
+
+          # Go to project folder
+          cd ~/Incident-management-system
+
+          # Pull latest code
+          git pull origin main
+
+          # Install dependencies
+          pip3 install -r requirements.txt
+
+          # Kill old app
+          pkill -f app.py || true
+
+          # Start app
+          nohup python3 app.py > output.log 2>&1 &
