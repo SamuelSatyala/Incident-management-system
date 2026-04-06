@@ -1,107 +1,118 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-import sqlite3
+from flask import Flask, render_template, request, redirect
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = "secret123"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///incidents.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# ---------------- DATABASE ----------------
-def get_db_connection():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+db = SQLAlchemy(app)
 
-# ---------------- LOGIN ----------------
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+# MODEL
+class Incident(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.String(200))
+    priority = db.Column(db.String(10))
+    status = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-        # Simple static login (for project)
-        if username == "admin" and password == "admin":
-            session['user'] = username
-            return redirect(url_for('index'))
-        else:
-            return "Invalid Credentials"
+# 🔥 SLA BASED ON PRIORITY
+def get_sla_hours(priority):
+    if priority == "P1":
+        return 1
+    elif priority == "P2":
+        return 2
+    elif priority == "P3":
+        return 3
+    elif priority == "P4":
+        return 4
+    return 3  # default fallback
 
-    return render_template('login.html')
+def get_sla_status(incident):
+    sla_hours = get_sla_hours(incident.priority)
+    deadline = incident.created_at + timedelta(hours=sla_hours)
 
-@app.route('/guest')
-def guest():
-    session['user'] = "guest"
-    return redirect(url_for('index'))
+    return "BREACHED" if datetime.utcnow() > deadline else "Within SLA"
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
+def get_countdown(incident):
+    sla_hours = get_sla_hours(incident.priority)
+    deadline = incident.created_at + timedelta(hours=sla_hours)
+    remaining = deadline - datetime.utcnow()
 
-# ---------------- HOME ----------------
+    if remaining.total_seconds() <= 0:
+        return "BREACHED"
+
+    hours = int(remaining.total_seconds() // 3600)
+    minutes = int((remaining.total_seconds() % 3600) // 60)
+
+    return f"{hours}h {minutes}m"
+
+# HOME
 @app.route('/')
 def index():
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    incidents = Incident.query.all()
 
-    conn = get_db_connection()
-    incidents = conn.execute('SELECT * FROM incidents').fetchall()
-    conn.close()
+    total = len(incidents)
+    open_count = len([i for i in incidents if i.status == "Open"])
+    major = len([i for i in incidents if i.priority == "P1"])
+    breached = len([i for i in incidents if get_sla_status(i) == "BREACHED"])
 
-    return render_template('index.html', incidents=incidents)
+    return render_template(
+        "index.html",
+        incidents=incidents,
+        total=total,
+        open_count=open_count,
+        major=major,
+        breached=breached,
+        get_sla_status=get_sla_status,
+        get_countdown=get_countdown
+    )
 
-# ---------------- CREATE ----------------
-@app.route('/create', methods=('GET', 'POST'))
-def create():
-    if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        priority = request.form['priority']
-        status = request.form['status']
+# ADD
+@app.route('/add', methods=['POST'])
+def add():
+    incident = Incident(
+        title=request.form['title'],
+        description=request.form['description'],
+        priority=request.form['priority'],
+        status=request.form['status']
+    )
+    db.session.add(incident)
+    db.session.commit()
+    return redirect('/')
 
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO incidents (title, description, priority, status) VALUES (?, ?, ?, ?)',
-            (title, description, priority, status)
-        )
-        conn.commit()
-        conn.close()
-
-        return redirect(url_for('index'))
-
-    return render_template('create.html')
-
-# ---------------- UPDATE ----------------
-@app.route('/update/<int:id>', methods=('GET', 'POST'))
+# UPDATE (LOCK CLOSED)
+@app.route('/update/<int:id>', methods=['GET', 'POST'])
 def update(id):
-    conn = get_db_connection()
-    incident = conn.execute('SELECT * FROM incidents WHERE id = ?', (id,)).fetchone()
+    incident = Incident.query.get_or_404(id)
 
     if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        priority = request.form['priority']
-        status = request.form['status']
 
-        conn.execute(
-            'UPDATE incidents SET title=?, description=?, priority=?, status=? WHERE id=?',
-            (title, description, priority, status, id)
-        )
-        conn.commit()
-        conn.close()
+        # 🔒 Prevent editing closed incidents
+        if incident.status == "Closed":
+            return redirect('/')
 
-        return redirect(url_for('index'))
+        incident.title = request.form['title']
+        incident.description = request.form['description']
+        incident.priority = request.form['priority']
+        incident.status = request.form['status']
 
-    conn.close()
-    return render_template('update.html', incident=incident)
+        db.session.commit()
+        return redirect('/')
 
-# ---------------- DELETE ----------------
+    return render_template("update.html", incident=incident)
+
+# DELETE
 @app.route('/delete/<int:id>')
 def delete(id):
-    conn = get_db_connection()
-    conn.execute('DELETE FROM incidents WHERE id = ?', (id,))
-    conn.commit()
-    conn.close()
+    incident = Incident.query.get_or_404(id)
+    db.session.delete(incident)
+    db.session.commit()
+    return redirect('/')
 
-    return redirect(url_for('index'))
-
-if __name__ == '__main__':
+# RUN
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
