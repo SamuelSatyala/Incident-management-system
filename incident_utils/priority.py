@@ -1,53 +1,47 @@
 class IncidentPriority:
     """
-    Priority engine for IT Incident Management System
+    Reusable priority engine packaged as an installable library component.
 
-    Uses Impact × Urgency matrix (3-2-1 scale):
-
-        High   = 3
-        Medium = 2
-        Low    = 1
-
-    Produces priority levels:
-        P1 — Critical
-        P2 — High
-        P3 — Medium
-        P4 — Low
+    The class converts impact and urgency into both a priority code and
+    an SLA policy so the web app and any future workers share the same rules.
     """
+
+    PRIORITY_THRESHOLDS = (
+        (8, "P1", 4),
+        (6, "P2", 8),
+        (3, "P3", 24),
+        (0, "P4", 48),
+    )
 
     def __init__(self, impact, urgency):
         self.impact = int(impact)
         self.urgency = int(urgency)
 
-    # =========================
-    # Calculate Priority
-    # =========================
+    @property
+    def score(self):
+        return self.impact * self.urgency
+
     def calculate_priority(self):
+        for threshold, priority, _sla_hours in self.PRIORITY_THRESHOLDS:
+            if self.score >= threshold:
+                return priority
+        return "P4"
 
-        score = self.impact * self.urgency
-
-        # Realistic ITSM mapping
-        if score >= 8:        # 3x3 or 3x2
-            return "P1"
-        elif score >= 6:      # 3x2 or 2x3
-            return "P2"
-        elif score >= 3:      # medium combinations
-            return "P3"
-        else:                 # low combinations
-            return "P4"
-
-    # =========================
-    # SLA Hours per Priority
-    # =========================
     def sla_hours(self):
+        for threshold, _priority, sla_hours in self.PRIORITY_THRESHOLDS:
+            if self.score >= threshold:
+                return sla_hours
+        return 48
 
-        priority = self.calculate_priority()
+    def is_major_incident(self):
+        return self.calculate_priority() == "P1"
 
-        mapping = {
-            "P1": 4,    # Critical — immediate response
-            "P2": 8,    # High
-            "P3": 24,   # Medium
-            "P4": 48    # Low
+    def as_dict(self):
+        return {
+            "impact": self.impact,
+            "urgency": self.urgency,
+            "score": self.score,
+            "priority": self.calculate_priority(),
+            "sla_hours": self.sla_hours(),
+            "is_major": self.is_major_incident(),
         }
-
-        return mapping.get(priority, 24)

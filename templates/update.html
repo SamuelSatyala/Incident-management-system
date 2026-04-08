@@ -1,58 +1,70 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Update Incident</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+{% extends "base.html" %}
 
-<body class="bg-light">
+{% block content %}
+<section class="panel-card narrow-panel">
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+            <p class="eyebrow mb-1">Incident #{{ incident.id }}</p>
+            <h1 class="h3 mb-1">Update Incident</h1>
+            <p class="text-muted mb-0">Priority is recalculated automatically from the impact and urgency matrix in the custom library.</p>
+        </div>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Back</a>
+    </div>
 
-<div class="container mt-4">
-
-<h3>Update Incident</h3>
-
-<form method="POST">
-
-    <!-- TITLE -->
-    <label class="form-label">Title</label>
-    <input name="title" value="{{ incident.title }}" class="form-control mb-3"
-    {% if incident.status == 'Closed' %}readonly{% endif %}>
-
-    <!-- DESCRIPTION -->
-    <label class="form-label">Description</label>
-    <input name="description" value="{{ incident.description }}" class="form-control mb-3"
-    {% if incident.status == 'Closed' %}readonly{% endif %}>
-
-    <!-- PRIORITY -->
-    <label class="form-label">Priority</label>
-    <select name="priority" class="form-control mb-3"
-    {% if incident.status == 'Closed' %}disabled{% endif %}>
-        <option value="P1" {% if incident.priority == 'P1' %}selected{% endif %}>P1</option>
-        <option value="P2" {% if incident.priority == 'P2' %}selected{% endif %}>P2</option>
-        <option value="P3" {% if incident.priority == 'P3' %}selected{% endif %}>P3</option>
-        <option value="P4" {% if incident.priority == 'P4' %}selected{% endif %}>P4</option>
-    </select>
-
-    <!-- STATUS -->
-    <label class="form-label">Status</label>
-    <select name="status" class="form-control mb-3"
-    {% if incident.status == 'Closed' %}disabled{% endif %}>
-        <option {% if incident.status == 'Open' %}selected{% endif %}>Open</option>
-        <option {% if incident.status == 'Resolved' %}selected{% endif %}>Resolved</option>
-        <option {% if incident.status == 'Closed' %}selected{% endif %}>Closed</option>
-    </select>
-
-    <!-- BUTTONS -->
-    {% if incident.status != 'Closed' %}
-        <button class="btn btn-success">Update</button>
-    {% else %}
-        <div class="alert alert-danger">This incident is CLOSED and cannot be modified.</div>
+    {% if incident.status == 'Closed' %}
+        <div class="alert alert-danger">This incident is closed and cannot be modified.</div>
     {% endif %}
 
-    <a href="/" class="btn btn-secondary">Back</a>
-
-</form>
-
-</div>
-</body>
-</html>
+    <form method="POST" class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Title</label>
+            <input name="title" value="{{ incident.title }}" class="form-control" {% if incident.status == 'Closed' %}readonly{% endif %} required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Business Service</label>
+            <input name="service_name" value="{{ incident.service_name }}" class="form-control" {% if incident.status == 'Closed' %}readonly{% endif %} required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Reporter Email</label>
+            <input name="reporter_email" type="email" value="{{ incident.reporter_email }}" class="form-control" {% if incident.status == 'Closed' %}readonly{% endif %} required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Current SLA State</label>
+            <input class="form-control" value="{{ sla_clock.status(incident) }} - {{ sla_clock.countdown(incident) }}" readonly>
+        </div>
+        <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea name="description" rows="4" class="form-control" {% if incident.status == 'Closed' %}readonly{% endif %} required>{{ incident.description }}</textarea>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Impact</label>
+            <select name="impact" class="form-select" {% if incident.status == 'Closed' %}disabled{% endif %}>
+                <option value="3" {% if incident.impact == 3 %}selected{% endif %}>High</option>
+                <option value="2" {% if incident.impact == 2 %}selected{% endif %}>Medium</option>
+                <option value="1" {% if incident.impact == 1 %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Urgency</label>
+            <select name="urgency" class="form-select" {% if incident.status == 'Closed' %}disabled{% endif %}>
+                <option value="3" {% if incident.urgency == 3 %}selected{% endif %}>High</option>
+                <option value="2" {% if incident.urgency == 2 %}selected{% endif %}>Medium</option>
+                <option value="1" {% if incident.urgency == 1 %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select" {% if incident.status == 'Closed' %}disabled{% endif %}>
+                <option {% if incident.status == 'Open' %}selected{% endif %}>Open</option>
+                <option {% if incident.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                <option {% if incident.status == 'Closed' %}selected{% endif %}>Closed</option>
+            </select>
+        </div>
+        <div class="col-12">
+            {% if incident.status != 'Closed' %}
+                <button class="btn btn-accent">Save Changes</button>
+            {% endif %}
+        </div>
+    </form>
+</section>
+{% endblock %}

@@ -1,184 +1,178 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Incident Dashboard</title>
+{% extends "base.html" %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-        body { background: #f3f4f6; }
-
-        .header {
-            background: linear-gradient(135deg, #0f172a, #1e3a8a);
-            color: white;
-            padding: 40px;
-            border-radius: 15px;
-        }
-
-        .card-box {
-            border-radius: 15px;
-            padding: 20px;
-            background: #fff;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-        }
-
-        .table-box {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-        }
-
-        .table thead {
-            background: #1f2937;
-            color: white;
-        }
-    </style>
-</head>
-
-<body>
-
-<div class="container mt-4">
-
-    <!-- HEADER -->
-    <div class="header d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2>IT Incident Management - CI/CD Working</h2>
-            <p>Cloud-Based Major Incident & SLA Monitoring System</p>
-            <span class="badge bg-success">System Operational</span>
-        </div>
-
-        <!-- 🔥 BUTTON OPENS MODAL -->
-        <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#incidentModal">
-            + Create Incident
-        </button>
+{% block content %}
+<section class="hero-panel mb-4">
+    <div>
+        <p class="eyebrow">Public-cloud incident response dashboard</p>
+        <h1 class="display-6 fw-semibold mb-2">Major incident handling with cloud telemetry, archival, and queue-based escalation.</h1>
+        <p class="lead mb-0">This deployment is designed for the NCI assignment brief: a Flask web app backed by a reusable Python library and five AWS service integrations.</p>
     </div>
+    <div class="hero-badge-grid">
+        <div class="hero-stat">
+            <span>Total</span>
+            <strong>{{ analytics.total }}</strong>
+        </div>
+        <div class="hero-stat">
+            <span>Major</span>
+            <strong>{{ analytics.major }}</strong>
+        </div>
+        <div class="hero-stat">
+            <span>Breached</span>
+            <strong>{{ analytics.breached }}</strong>
+        </div>
+    </div>
+</section>
 
-    <!-- 🔥 MODAL (HIDDEN FORM) -->
-    <div class="modal fade" id="incidentModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-
-                <div class="modal-header">
-                    <h5 class="modal-title">Create Incident</h5>
-                    <button class="btn-close" data-bs-dismiss="modal"></button>
+<div class="row g-4">
+    <div class="col-lg-4">
+        <section class="panel-card h-100">
+            <h2 class="h4 mb-3">Create Incident</h2>
+            <form action="{{ url_for('create_incident') }}" method="POST" class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">Title</label>
+                    <input name="title" class="form-control" required>
                 </div>
+                <div class="col-12">
+                    <label class="form-label">Business Service</label>
+                    <input name="service_name" class="form-control" placeholder="Payments API" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Reporter Email</label>
+                    <input name="reporter_email" type="email" class="form-control" placeholder="oncall@example.com" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" rows="3" class="form-control" required></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Impact</label>
+                    <select name="impact" class="form-select">
+                        <option value="3">High</option>
+                        <option value="2">Medium</option>
+                        <option value="1">Low</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Urgency</label>
+                    <select name="urgency" class="form-select">
+                        <option value="3">High</option>
+                        <option value="2">Medium</option>
+                        <option value="1">Low</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Initial Status</label>
+                    <select name="status" class="form-select">
+                        <option>Open</option>
+                        <option>Resolved</option>
+                        <option>Closed</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-accent w-100">Create and Sync</button>
+                </div>
+            </form>
+        </section>
+    </div>
 
-                <form action="/add" method="POST">
-                    <div class="modal-body">
-
-                        <label>Title</label>
-                        <input name="title" class="form-control mb-2" required>
-
-                        <label>Description</label>
-                        <input name="description" class="form-control mb-2" required>
-
-                        <label>Priority</label>
-                        <select name="priority" class="form-control mb-2">
-                            <option>P1</option>
-                            <option>P2</option>
-                            <option>P3</option>
-                            <option>P4</option>
-                        </select>
-
-                        <label>Status</label>
-                        <select name="status" class="form-control mb-2">
-                            <option>Open</option>
-                            <option>Resolved</option>
-                            <option>Closed</option>
-                        </select>
-
-                    </div>
-
-                    <div class="modal-footer">
-                        <button class="btn btn-success">Add Incident</button>
-                        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    </div>
-                </form>
-
+    <div class="col-lg-8">
+        <section class="panel-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="h4 mb-1">Operational Summary</h2>
+                    <p class="text-muted mb-0">The app can run locally in fallback mode or connect to live AWS resources through environment variables.</p>
+                </div>
+                <a href="{{ url_for('health') }}" class="btn btn-outline-secondary btn-sm">Health Endpoint</a>
             </div>
-        </div>
-    </div>
 
-    <!-- CARDS -->
-    <div class="row text-center mb-4">
-        <div class="col-md-3"><div class="card-box"><h6>Total Incidents</h6><h3>{{ total }}</h3></div></div>
-        <div class="col-md-3"><div class="card-box"><h6>Major Incidents</h6><h3 class="text-danger">{{ major }}</h3></div></div>
-        <div class="col-md-3"><div class="card-box"><h6>Open Incidents</h6><h3 class="text-warning">{{ open_count }}</h3></div></div>
-        <div class="col-md-3"><div class="card-box"><h6>SLA Breached</h6><h3 class="text-danger">{{ breached }}</h3></div></div>
-    </div>
+            <div class="row g-3">
+                <div class="col-md-3"><div class="mini-stat"><span>Open</span><strong>{{ analytics.open }}</strong></div></div>
+                <div class="col-md-3"><div class="mini-stat"><span>Resolved</span><strong>{{ analytics.resolved }}</strong></div></div>
+                <div class="col-md-3"><div class="mini-stat"><span>Live Services</span><strong>{{ cloud_summary.live }}</strong></div></div>
+                <div class="col-md-3"><div class="mini-stat"><span>Fallback Services</span><strong>{{ cloud_summary.fallback }}</strong></div></div>
+            </div>
+        </section>
 
-    <!-- TABLE -->
-    <div class="table-box">
-        <table class="table">
-
-            <thead>
-                <tr>
-                    <th>ID</th><th>Title</th><th>Priority</th><th>Status</th>
-                    <th>SLA</th><th>Countdown</th><th>Major</th><th>Actions</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for i in incidents %}
-                <tr>
-                    <td>{{ i.id }}</td>
-                    <td>{{ i.title }}</td>
-
-                    <td>
-                        <span class="badge 
-                        {% if i.priority == 'P1' %}bg-danger
-                        {% elif i.priority == 'P2' %}bg-warning
-                        {% elif i.priority == 'P3' %}bg-primary
-                        {% else %}bg-secondary{% endif %}">
-                        {{ i.priority }}
-                        </span>
-                    </td>
-
-                    <td>{{ i.status }}</td>
-
-                    <td>
-                        {% if get_sla_status(i) == "BREACHED" %}
-                            <span class="badge bg-danger">BREACHED</span>
-                        {% else %}
-                            <span class="badge bg-success">Within SLA</span>
-                        {% endif %}
-                    </td>
-
-                    <td class="fw-bold text-danger">
-                        {{ get_countdown(i) }}
-                    </td>
-
-                    <td>
-                        {% if i.priority == 'P1' %}
-                            <span class="badge bg-danger">MAJOR</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Normal</span>
-                        {% endif %}
-                    </td>
-
-                    <td>
-                        <a href="/update/{{ i.id }}" class="btn btn-warning btn-sm">Edit</a>
-                        <a href="/delete/{{ i.id }}" class="btn btn-danger btn-sm">Delete</a>
-                    </td>
-                </tr>
+        <section class="panel-card mb-4">
+            <h2 class="h4 mb-3">Cloud Services Used</h2>
+            <div class="row g-3">
+                {% for service in cloud_statuses %}
+                <div class="col-md-6">
+                    <div class="service-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>{{ service.name }}</strong>
+                            <span class="badge {% if service.mode == 'live' %}text-bg-success{% elif service.mode == 'fallback' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
+                                {{ service.mode|upper }}
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted">{{ service.purpose }}</p>
+                    </div>
+                </div>
                 {% endfor %}
-            </tbody>
+            </div>
+        </section>
 
-        </table>
+        <section class="panel-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="h4 mb-1">Incident Register</h2>
+                    <p class="text-muted mb-0">Each create, update, and delete event triggers the cloud integration manager.</p>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Service</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>SLA</th>
+                            <th>Cloud Sync</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for incident in incidents %}
+                        <tr>
+                            <td>#{{ incident.id }}</td>
+                            <td>
+                                <strong>{{ incident.title }}</strong>
+                                <div class="small text-muted">{{ incident.reporter_email }}</div>
+                            </td>
+                            <td>{{ incident.service_name }}</td>
+                            <td>
+                                <span class="badge {% if incident.priority == 'P1' %}text-bg-danger{% elif incident.priority == 'P2' %}text-bg-warning{% elif incident.priority == 'P3' %}text-bg-primary{% else %}text-bg-secondary{% endif %}">
+                                    {{ incident.priority }}
+                                </span>
+                                {% if incident.is_major %}
+                                <div class="small text-danger fw-semibold mt-1">Major incident</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ incident.status }}</td>
+                            <td>
+                                <div>{{ sla_clock.status(incident) }}</div>
+                                <div class="small text-muted">{{ sla_clock.countdown(incident) }}</div>
+                            </td>
+                            <td><span class="badge text-bg-dark">{{ incident.cloud_sync_state }}</span></td>
+                            <td class="d-flex gap-2">
+                                <a href="{{ url_for('update_incident', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <form action="{{ url_for('delete_incident', incident_id=incident.id) }}" method="POST">
+                                    <button class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">No incidents yet. Create one to test the incident workflow and cloud logging pipeline.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
-
 </div>
-
-<!-- POPUP -->
-<script>
-    const majorCount = {{ major }};
-    if (majorCount > 0) {
-        alert("⚠️ MAJOR INCIDENT ACTIVE — Immediate attention required!");
-    }
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "incident-utils-nci"
+version = "0.1.0"
+description = "Reusable incident-priority and SLA helper library for the NCI cloud incident system."
+readme = "LIBRARY_README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Samuel" }
+]
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["incident_utils*"]
