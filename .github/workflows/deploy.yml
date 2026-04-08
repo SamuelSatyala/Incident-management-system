@@ -10,26 +10,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Deploy to EC2 via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ec2-user   # ✅ FIXED
-        key: ${{ secrets.EC2_KEY }}
-        script:  |
-          echo "Connected to EC2"
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            echo "Connected to EC2"
 
-          cd ~/incident-management-system
+            cd ~/incident-management-system
 
-          git pull origin main
+            git pull origin main
 
-          python3 -m venv venv || true
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
+            python3 -m venv venv || true
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
-          pkill -f "venv/bin/python app.py" || true
-          nohup venv/bin/python app.py > output.log 2>&1 < /dev/null &
+            if [ -f app.pid ]; then
+              kill $(cat app.pid) || true
+              rm -f app.pid
+            fi
+
+            nohup venv/bin/python app.py > output.log 2>&1 < /dev/null &
+            echo $! > app.pid
+
+            sleep 5
+
+            echo "Application started with PID:"
+            cat app.pid
+
+            echo "Last 20 lines of output.log:"
+            tail -n 20 output.log || true
