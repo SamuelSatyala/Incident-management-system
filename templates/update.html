@@ -21,14 +21,6 @@
             <input name="title" value="{{ incident.title }}" class="form-control" {% if incident.status == 'Closed' %}readonly{% endif %} required>
         </div>
         <div class="col-md-6">
-            <label class="form-label">Business Service</label>
-            <input name="service_name" value="{{ incident.service_name }}" class="form-control" {% if incident.status == 'Closed' %}readonly{% endif %} required>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label">Reporter Email</label>
-            <input name="reporter_email" type="email" value="{{ incident.reporter_email }}" class="form-control" {% if incident.status == 'Closed' %}readonly{% endif %} required>
-        </div>
-        <div class="col-md-6">
             <label class="form-label">Current SLA State</label>
             <input class="form-control" value="{{ sla_clock.status(incident) }} - {{ sla_clock.countdown(incident) }}" readonly>
         </div>

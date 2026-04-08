@@ -4,8 +4,8 @@
 <section class="hero-panel mb-4">
     <div>
         <p class="eyebrow">Public-cloud incident response dashboard</p>
-        <h1 class="display-6 fw-semibold mb-2">CICD Major incident handling with cloud telemetry, archival, and queue-based escalation.</h1>
-        <p class="lead mb-0">This deployment is designed for the NCI assignment brief: a Flask web app backed by a reusable Python library and five AWS service integrations.</p>
+        <h1 class="display-6 fw-semibold mb-2">Manage incidents quickly, track SLA pressure, and keep response work easy to follow.</h1>
+        <p class="lead mb-0">A cleaner incident management workspace for logging issues, prioritising urgency, and monitoring operational health.</p>
     </div>
     <div class="hero-badge-grid">
         <div class="hero-stat">
@@ -31,14 +31,6 @@
                 <div class="col-12">
                     <label class="form-label">Title</label>
                     <input name="title" class="form-control" required>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Business Service</label>
-                    <input name="service_name" class="form-control" placeholder="Payments API" required>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Reporter Email</label>
-                    <input name="reporter_email" type="email" class="form-control" placeholder="oncall@example.com" required>
                 </div>
                 <div class="col-12">
                     <label class="form-label">Description</label>
@@ -69,7 +61,7 @@
                     </select>
                 </div>
                 <div class="col-12">
-                    <button class="btn btn-accent w-100">Create and Sync</button>
+                    <button class="btn btn-accent w-100">Create Incident</button>
                 </div>
             </form>
         </section>
@@ -80,7 +72,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h2 class="h4 mb-1">Operational Summary</h2>
-                    <p class="text-muted mb-0">The app can run locally in fallback mode or connect to live AWS resources through environment variables.</p>
+                    <p class="text-muted mb-0">Track open work, resolved incidents, and overall SLA pressure from a single view.</p>
                 </div>
                 <a href="{{ url_for('health') }}" class="btn btn-outline-secondary btn-sm">Health Endpoint</a>
             </div>
@@ -88,27 +80,8 @@
             <div class="row g-3">
                 <div class="col-md-3"><div class="mini-stat"><span>Open</span><strong>{{ analytics.open }}</strong></div></div>
                 <div class="col-md-3"><div class="mini-stat"><span>Resolved</span><strong>{{ analytics.resolved }}</strong></div></div>
-                <div class="col-md-3"><div class="mini-stat"><span>Live Services</span><strong>{{ cloud_summary.live }}</strong></div></div>
-                <div class="col-md-3"><div class="mini-stat"><span>Fallback Services</span><strong>{{ cloud_summary.fallback }}</strong></div></div>
-            </div>
-        </section>
-
-        <section class="panel-card mb-4">
-            <h2 class="h4 mb-3">Cloud Services Used</h2>
-            <div class="row g-3">
-                {% for service in cloud_statuses %}
-                <div class="col-md-6">
-                    <div class="service-card">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <strong>{{ service.name }}</strong>
-                            <span class="badge {% if service.mode == 'live' %}text-bg-success{% elif service.mode == 'fallback' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
-                                {{ service.mode|upper }}
-                            </span>
-                        </div>
-                        <p class="mb-0 text-muted">{{ service.purpose }}</p>
-                    </div>
-                </div>
-                {% endfor %}
+                <div class="col-md-3"><div class="mini-stat"><span>Total</span><strong>{{ analytics.total }}</strong></div></div>
+                <div class="col-md-3"><div class="mini-stat"><span>Breached</span><strong>{{ analytics.breached }}</strong></div></div>
             </div>
         </section>
 
@@ -116,7 +89,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h2 class="h4 mb-1">Incident Register</h2>
-                    <p class="text-muted mb-0">Each create, update, and delete event triggers the cloud integration manager.</p>
+                    <p class="text-muted mb-0">Review live incidents, update progress, and keep response work moving.</p>
                 </div>
             </div>
 
@@ -126,11 +99,9 @@
                         <tr>
                             <th>ID</th>
                             <th>Title</th>
-                            <th>Service</th>
                             <th>Priority</th>
                             <th>Status</th>
                             <th>SLA</th>
-                            <th>Cloud Sync</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -138,11 +109,7 @@
                         {% for incident in incidents %}
                         <tr>
                             <td>#{{ incident.id }}</td>
-                            <td>
-                                <strong>{{ incident.title }}</strong>
-                                <div class="small text-muted">{{ incident.reporter_email }}</div>
-                            </td>
-                            <td>{{ incident.service_name }}</td>
+                            <td><strong>{{ incident.title }}</strong></td>
                             <td>
                                 <span class="badge {% if incident.priority == 'P1' %}text-bg-danger{% elif incident.priority == 'P2' %}text-bg-warning{% elif incident.priority == 'P3' %}text-bg-primary{% else %}text-bg-secondary{% endif %}">
                                     {{ incident.priority }}
@@ -156,7 +123,6 @@
                                 <div>{{ sla_clock.status(incident) }}</div>
                                 <div class="small text-muted">{{ sla_clock.countdown(incident) }}</div>
                             </td>
-                            <td><span class="badge text-bg-dark">{{ incident.cloud_sync_state }}</span></td>
                             <td class="d-flex gap-2">
                                 <a href="{{ url_for('update_incident', incident_id=incident.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
                                 <form action="{{ url_for('delete_incident', incident_id=incident.id) }}" method="POST">
@@ -166,7 +132,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">No incidents yet. Create one to test the incident workflow and cloud logging pipeline.</td>
+                            <td colspan="6" class="text-center text-muted py-4">No incidents yet. Create one to start tracking operational issues.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -45,8 +45,8 @@ def create_app():
         incident = Incident(
             title=request.form["title"].strip(),
             description=request.form["description"].strip(),
-            service_name=request.form["service_name"].strip(),
-            reporter_email=request.form["reporter_email"].strip(),
+            service_name="Core Platform",
+            reporter_email="system@nci.local",
             impact=impact,
             urgency=urgency,
             priority=priority_engine.calculate_priority(),
@@ -83,8 +83,6 @@ def create_app():
 
             incident.title = request.form["title"].strip()
             incident.description = request.form["description"].strip()
-            incident.service_name = request.form["service_name"].strip()
-            incident.reporter_email = request.form["reporter_email"].strip()
             incident.impact = impact
             incident.urgency = urgency
             incident.priority = priority_engine.calculate_priority()
