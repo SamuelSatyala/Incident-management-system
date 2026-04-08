@@ -31,6 +31,9 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
 
+            pkill -f gunicorn || true
+            pkill -f "python.*app.py" || true
+
             if [ -f app.pid ]; then
               kill $(cat app.pid) || true
               rm -f app.pid
@@ -46,6 +49,9 @@ jobs:
 
             echo "Application started with PID:"
             cat app.pid
+
+            echo "Port check:"
+            ss -ltnp | grep 8000 || true
 
             echo "Last 20 lines of output.log:"
             tail -n 20 output.log || true
