@@ -31,24 +31,9 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
 
-            if [ -f app.pid ]; then
-              kill $(cat app.pid) || true
-              rm -f app.pid
-            fi
-
-            export PORT=8000
-            export FLASK_DEBUG=false
-
-            nohup venv/bin/python app.py > output.log 2>&1 < /dev/null &
-            echo $! > app.pid
-
-            sleep 5
-
-            echo "Application started with PID:"
-            cat app.pid
+            sudo systemctl daemon-reload
+            sudo systemctl restart incident-system
+            sudo systemctl status incident-system --no-pager
 
             echo "Port check:"
             ss -ltnp | grep 8000 || true
-
-            echo "Last 20 lines of output.log:"
-            tail -n 20 output.log || true
