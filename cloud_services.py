@@ -112,13 +112,19 @@ class CloudIntegrationManager:
         bucket = self.config.get("S3_ARCHIVE_BUCKET")
         key = f"incidents/{payload['incident']['id']}/{payload['event_name']}.json"
         if bucket and self._boto3:
-            self._client("s3").put_object(
-                Bucket=bucket,
-                Key=key,
-                Body=json.dumps(payload).encode("utf-8"),
-                ContentType="application/json",
-            )
-            return "live"
+            try:
+                self._client("s3").put_object(
+                    Bucket=bucket,
+                    Key=key,
+                    Body=json.dumps(payload).encode("utf-8"),
+                    ContentType="application/json",
+                )
+                return "live"
+            except Exception as exc:
+                self.local_store.write(
+                    "s3_archive_error",
+                    {"error": str(exc), "bucket": bucket, "key": key, "payload": payload},
+                )
         self.local_store.write(
             "s3_archive",
             {"bucket": bucket or "local", "key": key, "payload": payload},
@@ -128,20 +134,26 @@ class CloudIntegrationManager:
     def _write_audit_record(self, payload):
         table = self.config.get("DYNAMODB_AUDIT_TABLE")
         if table and self._boto3:
-            self._client("dynamodb").put_item(
-                TableName=table,
-                Item={
-                    "incident_id": {"S": str(payload["incident"]["id"])},
-                    "event_name": {"S": payload["event_name"]},
-                    "created_at": {
-                        "S": payload["incident"]["updated_at"]
-                        or payload["incident"]["created_at"]
+            try:
+                self._client("dynamodb").put_item(
+                    TableName=table,
+                    Item={
+                        "incident_id": {"S": str(payload["incident"]["id"])},
+                        "event_name": {"S": payload["event_name"]},
+                        "created_at": {
+                            "S": payload["incident"]["updated_at"]
+                            or payload["incident"]["created_at"]
+                        },
+                        "priority": {"S": payload["incident"]["priority"]},
+                        "status": {"S": payload["incident"]["status"]},
                     },
-                    "priority": {"S": payload["incident"]["priority"]},
-                    "status": {"S": payload["incident"]["status"]},
-                },
-            )
-            return "live"
+                )
+                return "live"
+            except Exception as exc:
+                self.local_store.write(
+                    "dynamodb_audit_error",
+                    {"error": str(exc), "table": table, "payload": payload},
+                )
         self.local_store.write("dynamodb_audit", payload)
         return "fallback"
 
@@ -160,44 +172,62 @@ class CloudIntegrationManager:
         )
 
         if topic_arn and self._boto3:
-            self._client("sns").publish(
-                TopicArn=topic_arn,
-                Subject=f"Incident Event: {payload['event_name']}",
-                Message=message,
-            )
-            return "live"
+            try:
+                self._client("sns").publish(
+                    TopicArn=topic_arn,
+                    Subject=f"Incident Event: {payload['event_name']}",
+                    Message=message,
+                )
+                return "live"
+            except Exception as exc:
+                self.local_store.write(
+                    "sns_notifications_error",
+                    {"error": str(exc), "topic_arn": topic_arn, "payload": payload},
+                )
         self.local_store.write("sns_notifications", {"message": message, "payload": payload})
         return "fallback"
 
     def _queue_follow_up(self, payload):
         queue_url = self.config.get("SQS_QUEUE_URL")
         if queue_url and self._boto3:
-            self._client("sqs").send_message(
-                QueueUrl=queue_url,
-                MessageBody=json.dumps(payload),
-            )
-            return "live"
+            try:
+                self._client("sqs").send_message(
+                    QueueUrl=queue_url,
+                    MessageBody=json.dumps(payload),
+                )
+                return "live"
+            except Exception as exc:
+                self.local_store.write(
+                    "sqs_queue_error",
+                    {"error": str(exc), "queue_url": queue_url, "payload": payload},
+                )
         self.local_store.write("sqs_queue", payload)
         return "fallback"
 
     def _publish_metric(self, payload):
         namespace = self.config.get("CLOUDWATCH_NAMESPACE", "IncidentPlatform")
         if namespace and self._boto3:
-            self._client("cloudwatch").put_metric_data(
-                Namespace=namespace,
-                MetricData=[
-                    {
-                        "MetricName": "IncidentEvent",
-                        "Value": 1,
-                        "Unit": "Count",
-                        "Dimensions": [
-                            {"Name": "Priority", "Value": payload["incident"]["priority"]},
-                            {"Name": "Status", "Value": payload["incident"]["status"]},
-                            {"Name": "Event", "Value": payload["event_name"]},
-                        ],
-                    }
-                ],
-            )
-            return "live"
+            try:
+                self._client("cloudwatch").put_metric_data(
+                    Namespace=namespace,
+                    MetricData=[
+                        {
+                            "MetricName": "IncidentEvent",
+                            "Value": 1,
+                            "Unit": "Count",
+                            "Dimensions": [
+                                {"Name": "Priority", "Value": payload["incident"]["priority"]},
+                                {"Name": "Status", "Value": payload["incident"]["status"]},
+                                {"Name": "Event", "Value": payload["event_name"]},
+                            ],
+                        }
+                    ],
+                )
+                return "live"
+            except Exception as exc:
+                self.local_store.write(
+                    "cloudwatch_metrics_error",
+                    {"error": str(exc), "namespace": namespace, "payload": payload},
+                )
         self.local_store.write("cloudwatch_metrics", payload)
         return "fallback"

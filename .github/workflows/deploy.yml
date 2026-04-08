@@ -36,6 +36,9 @@ jobs:
               rm -f app.pid
             fi
 
+            export PORT=8000
+            export FLASK_DEBUG=false
+
             nohup venv/bin/python app.py > output.log 2>&1 < /dev/null &
             echo $! > app.pid
 
