@@ -88,6 +88,24 @@ body {
     padding: 1.5rem;
 }
 
+.create-panel {
+    padding: 1.25rem;
+}
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.compact-form .form-label {
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+    color: #26445a;
+}
+
 .narrow-panel {
     max-width: 900px;
     margin: 0 auto;
@@ -153,7 +171,7 @@ body {
 .form-select {
     border-radius: 14px;
     border: 1px solid #cfd8e3;
-    padding: 0.8rem 0.95rem;
+    padding: 0.72rem 0.9rem;
     background: #ffffff;
 }
 
@@ -167,17 +185,39 @@ body {
     border: 1px solid #e2e8f0;
     border-radius: 18px;
     overflow: hidden;
+    background: #ffffff;
 }
 
 .table thead th {
     background: #edf6fb;
     color: #15384d;
     font-weight: 700;
+    padding: 1rem 1.05rem;
+    vertical-align: middle;
 }
 
 .table > :not(caption) > * > * {
     background: transparent;
     border-color: var(--line);
+    padding: 1rem 1.05rem;
+    vertical-align: middle;
+}
+
+.incident-table tbody tr:hover {
+    background: #f8fbfd;
+}
+
+.incident-title-cell {
+    min-width: 160px;
+}
+
+.actions-cell {
+    white-space: nowrap;
+}
+
+.actions-cell form {
+    display: inline-block;
+    margin-left: 0.45rem;
 }
 
 .badge.text-bg-danger {
@@ -200,5 +240,11 @@ body {
 @media (max-width: 991px) {
     .hero-panel {
         grid-template-columns: 1fr;
+    }
+
+    .actions-cell form {
+        margin-left: 0;
+        margin-top: 0.45rem;
+        display: block;
     }
 }
