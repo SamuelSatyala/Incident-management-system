@@ -1,6 +1,7 @@
 import os
 
 from flask import Flask, flash, redirect, render_template, request, url_for
+from sqlalchemy import text
 
 from cloud_services import CloudIntegrationManager
 from config import Config
@@ -16,6 +17,10 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
+            with db.engine.connect() as connection:
+                connection.execute(text("PRAGMA journal_mode=WAL"))
+                connection.execute(text("PRAGMA busy_timeout=30000"))
 
     cloud_manager = CloudIntegrationManager(app.config)
 
@@ -40,13 +45,19 @@ def create_app():
 
     @app.route("/incidents", methods=["POST"])
     def create_incident():
-        impact = int(request.form["impact"])
-        urgency = int(request.form["urgency"])
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        if not title or not description:
+            flash("Title and description are required to create an incident.", "danger")
+            return redirect(url_for("index"))
+
+        impact = int(request.form.get("impact", 3))
+        urgency = int(request.form.get("urgency", 3))
         priority_engine = IncidentPriority(impact=impact, urgency=urgency)
 
         incident = Incident(
-            title=request.form["title"].strip(),
-            description=request.form["description"].strip(),
+            title=title,
+            description=description,
             service_name="Core Platform",
             reporter_email="system@nci.local",
             impact=impact,
@@ -60,7 +71,7 @@ def create_app():
         db.session.add(incident)
         db.session.commit()
 
-        sync_state = cloud_manager.record_event(incident, "incident_created")
+        sync_state = safe_record_event(cloud_manager, incident, "incident_created")
         incident.cloud_sync_state = sync_state
         db.session.commit()
 
@@ -79,12 +90,14 @@ def create_app():
                 flash("Closed incidents are locked and cannot be edited.", "danger")
                 return redirect(url_for("index"))
 
-            impact = int(request.form["impact"])
-            urgency = int(request.form["urgency"])
+            impact = int(request.form.get("impact", 3))
+            urgency = int(request.form.get("urgency", 3))
             priority_engine = IncidentPriority(impact=impact, urgency=urgency)
 
-            incident.title = request.form["title"].strip()
-            incident.description = request.form["description"].strip()
+            incident.title = request.form.get("title", incident.title).strip()
+            incident.description = request.form.get(
+                "description", incident.description
+            ).strip()
             incident.impact = impact
             incident.urgency = urgency
             incident.priority = priority_engine.calculate_priority()
@@ -99,7 +112,7 @@ def create_app():
 
             db.session.commit()
 
-            sync_state = cloud_manager.record_event(incident, "incident_updated")
+            sync_state = safe_record_event(cloud_manager, incident, "incident_updated")
             incident.cloud_sync_state = sync_state
             db.session.commit()
 
@@ -111,7 +124,7 @@ def create_app():
     @app.route("/incidents/<int:incident_id>/delete", methods=["POST"])
     def delete_incident(incident_id):
         incident = Incident.query.get_or_404(incident_id)
-        cloud_manager.record_event(incident, "incident_deleted")
+        safe_record_event(cloud_manager, incident, "incident_deleted")
         db.session.delete(incident)
         db.session.commit()
         flash(f"Incident #{incident_id} deleted.", "warning")
@@ -126,6 +139,14 @@ def create_app():
         }
 
     return app
+
+
+def safe_record_event(cloud_manager, incident, event_name):
+    try:
+        return cloud_manager.record_event(incident, event_name)
+    except Exception as exc:
+        print(f"Cloud sync failed for {event_name} on incident {incident.id}: {exc}")
+        return "fallback"
 
 
 app = create_app()

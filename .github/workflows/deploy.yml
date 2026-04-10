@@ -53,7 +53,28 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
 
+            sudo tee /etc/systemd/system/incident-system.service > /dev/null <<'SERVICE'
+            [Unit]
+            Description=Cloud Incident Control Centre
+            After=network.target
+
+            [Service]
+            User=ec2-user
+            Group=ec2-user
+            WorkingDirectory=/home/ec2-user/incident-management-system
+            EnvironmentFile=-/home/ec2-user/incident-management-system/.env
+            Environment=PORT=8000
+            Environment=FLASK_DEBUG=false
+            ExecStart=/home/ec2-user/incident-management-system/venv/bin/gunicorn --workers 1 --timeout 60 --bind 0.0.0.0:8000 app:app
+            Restart=always
+            RestartSec=5
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICE
+
             sudo systemctl daemon-reload
+            sudo systemctl enable incident-system
             sudo systemctl restart incident-system
             sudo systemctl status incident-system --no-pager
 

@@ -13,6 +13,9 @@ class Config:
         "DATABASE_URL",
         f"sqlite:///{(INSTANCE_DIR / 'cloud_incident_control.db').as_posix()}",
     )
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "connect_args": {"timeout": 30},
+    }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     CLOUD_PROVIDER = os.getenv("CLOUD_PROVIDER", "aws")
